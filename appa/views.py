@@ -19,17 +19,29 @@ class CategoryList(View):
             data = json.loads(request.body)
         except json.JSONDecodeError:
             return JsonResponse({'error': 'Invalid JSON'}, status=400)
-        
         form = CategoryForm(data)
         if form.is_valid():
             obj = form.save()
             return JsonResponse({'id': obj.id, 'name': obj.name, 'description': obj.description}, status=201)
         return JsonResponse({'errors': form.errors}, status=400)
 
+@method_decorator(csrf_exempt, name='dispatch')
 class CategoryDetail(View):
     def get(self, request, category_id):
         c = get_object_or_404(Category, id=category_id)
         return JsonResponse({'id': c.id, 'name': c.name, 'description': c.description})
+
+    def put(self, request, category_id):
+        c = get_object_or_404(Category, id=category_id)
+        try:
+            data = json.loads(request.body)
+            form = CategoryForm(data, instance=c) # instance=c для обновления!
+            if form.is_valid():
+                obj = form.save()
+                return JsonResponse({'id': obj.id, 'name': obj.name, 'description': obj.description}, status=200)
+            return JsonResponse({'errors': form.errors}, status=400)
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
 
 @method_decorator(csrf_exempt, name='dispatch')
 class ExpenseList(View):
@@ -42,20 +54,29 @@ class ExpenseList(View):
             data = json.loads(request.body)
         except json.JSONDecodeError:
             return JsonResponse({'error': 'Invalid JSON'}, status=400)
-        
         form = ExpenseForm(data)
         if form.is_valid():
             obj = form.save()
-            return JsonResponse({
-                'status': 201, 'id': obj.id, 'amount': float(obj.amount), 
-                'date': obj.date.isoformat(), 'category_id': obj.category_id
-            }, status=201)
+            return JsonResponse({'status': 201, 'id': obj.id, 'amount': float(obj.amount), 'date': obj.date.isoformat(), 'category_id': obj.category_id}, status=201)
         return JsonResponse({'status': 400, 'errors': form.errors}, status=400)
 
+@method_decorator(csrf_exempt, name='dispatch')
 class ExpenseDetail(View):
     def get(self, request, expense_id):
         e = get_object_or_404(Expense.objects.select_related('category', 'user'), id=expense_id)
         return JsonResponse({'id': e.id, 'amount': float(e.amount), 'date': e.date.isoformat(), 'description': e.description, 'category_id': e.category_id, 'user_id': e.user_id})
+
+    def put(self, request, expense_id):
+        e = get_object_or_404(Expense, id=expense_id)
+        try:
+            data = json.loads(request.body)
+            form = ExpenseForm(data, instance=e) # instance=e для обновления!
+            if form.is_valid():
+                obj = form.save()
+                return JsonResponse({'id': obj.id, 'amount': float(obj.amount), 'date': obj.date.isoformat(), 'description': obj.description, 'category_id': obj.category_id, 'user_id': obj.user_id}, status=200)
+            return JsonResponse({'errors': form.errors}, status=400)
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
 
 class ExpenseSummary(View):
     def get(self, request):
@@ -80,17 +101,29 @@ class TagList(View):
             data = json.loads(request.body)
         except json.JSONDecodeError:
             return JsonResponse({'error': 'Invalid JSON'}, status=400)
-        
         form = TagForm(data)
         if form.is_valid():
             obj = form.save()
             return JsonResponse({'id': obj.id, 'name': obj.name, 'description': obj.description}, status=201)
         return JsonResponse({'errors': form.errors}, status=400)
 
+@method_decorator(csrf_exempt, name='dispatch')
 class TagDetail(View):
     def get(self, request, tag_id):
         t = get_object_or_404(Tag, id=tag_id)
         return JsonResponse({'id': t.id, 'name': t.name, 'description': t.description})
+
+    def put(self, request, tag_id):
+        t = get_object_or_404(Tag, id=tag_id)
+        try:
+            data = json.loads(request.body)
+            form = TagForm(data, instance=t) # instance=t для обновления!
+            if form.is_valid():
+                obj = form.save()
+                return JsonResponse({'id': obj.id, 'name': obj.name, 'description': obj.description}, status=200)
+            return JsonResponse({'errors': form.errors}, status=400)
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
 
 class ExpenseTags(View):
     def get(self, request, expense_id):
