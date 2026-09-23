@@ -35,7 +35,7 @@ class CategoryDetail(View):
         c = get_object_or_404(Category, id=category_id)
         try:
             data = json.loads(request.body)
-            form = CategoryForm(data, instance=c) # instance=c для обновления!
+            form = CategoryForm(data, instance=c)
             if form.is_valid():
                 obj = form.save()
                 return JsonResponse({'id': obj.id, 'name': obj.name, 'description': obj.description}, status=200)
@@ -70,7 +70,7 @@ class ExpenseDetail(View):
         e = get_object_or_404(Expense, id=expense_id)
         try:
             data = json.loads(request.body)
-            form = ExpenseForm(data, instance=e) # instance=e для обновления!
+            form = ExpenseForm(data, instance=e)
             if form.is_valid():
                 obj = form.save()
                 return JsonResponse({'id': obj.id, 'amount': float(obj.amount), 'date': obj.date.isoformat(), 'description': obj.description, 'category_id': obj.category_id, 'user_id': obj.user_id}, status=200)
@@ -78,17 +78,20 @@ class ExpenseDetail(View):
         except json.JSONDecodeError:
             return JsonResponse({'error': 'Invalid JSON'}, status=400)
 
-class ExpenseSummary(View):
-    def get(self, request):
-        from_date = request.GET.get('from')
-        period = request.GET.get('period')
-        if not from_date:
-            return JsonResponse({'error': 'Parameter "from" is required'}, status=400)
-        days = {'week': 7, 'month': 30, 'year': 365}.get(period)
-        if not days:
-            return JsonResponse({'error': 'Invalid period'}, status=400)
+class ExpenseSummaryWeek(View):
+    def get(self, request, from_date):
         total = Expense.objects.filter(date__gte=from_date).aggregate(Sum('amount'))['amount__sum'] or 0
-        return JsonResponse({'period': period, 'from_date': from_date, 'total_days': days, 'total_amount': float(total)})
+        return JsonResponse({'period': 'week', 'from_date': from_date, 'total_amount': float(total)})
+
+class ExpenseSummaryMonth(View):
+    def get(self, request, from_date):
+        total = Expense.objects.filter(date__gte=from_date).aggregate(Sum('amount'))['amount__sum'] or 0
+        return JsonResponse({'period': 'month', 'from_date': from_date, 'total_amount': float(total)})
+
+class ExpenseSummaryYear(View):
+    def get(self, request, from_date):
+        total = Expense.objects.filter(date__gte=from_date).aggregate(Sum('amount'))['amount__sum'] or 0
+        return JsonResponse({'period': 'year', 'from_date': from_date, 'total_amount': float(total)})
 
 @method_decorator(csrf_exempt, name='dispatch')
 class TagList(View):
@@ -117,7 +120,7 @@ class TagDetail(View):
         t = get_object_or_404(Tag, id=tag_id)
         try:
             data = json.loads(request.body)
-            form = TagForm(data, instance=t) # instance=t для обновления!
+            form = TagForm(data, instance=t)
             if form.is_valid():
                 obj = form.save()
                 return JsonResponse({'id': obj.id, 'name': obj.name, 'description': obj.description}, status=200)
@@ -131,13 +134,20 @@ class ExpenseTags(View):
         data = [{'id': et.tag.id, 'name': et.tag.name} for et in ExpenseTag.objects.filter(expense_id=expense_id).select_related('tag')]
         return JsonResponse({'tags': data})
 
-class TagExpensesSummary(View):
-    def get(self, request, tag_id):
+class TagExpensesSummaryWeek(View):
+    def get(self, request, tag_id, from_date):
         get_object_or_404(Tag, id=tag_id)
-        from_date = request.GET.get('from')
-        period = request.GET.get('period')
-        days = {'week': 7, 'month': 30, 'year': 365}.get(period)
-        if not days:
-            return JsonResponse({'error': 'Invalid period'}, status=400)
         total = ExpenseTag.objects.filter(tag_id=tag_id, expense__date__gte=from_date).aggregate(Sum('expense__amount'))['expense__amount__sum'] or 0
-        return JsonResponse({'tag_id': tag_id, 'period': period, 'from_date': from_date, 'total_amount': float(total)})
+        return JsonResponse({'tag_id': tag_id, 'period': 'week', 'from_date': from_date, 'total_amount': float(total)})
+
+class TagExpensesSummaryMonth(View):
+    def get(self, request, tag_id, from_date):
+        get_object_or_404(Tag, id=tag_id)
+        total = ExpenseTag.objects.filter(tag_id=tag_id, expense__date__gte=from_date).aggregate(Sum('expense__amount'))['expense__amount__sum'] or 0
+        return JsonResponse({'tag_id': tag_id, 'period': 'month', 'from_date': from_date, 'total_amount': float(total)})
+
+class TagExpensesSummaryYear(View):
+    def get(self, request, tag_id, from_date):
+        get_object_or_404(Tag, id=tag_id)
+        total = ExpenseTag.objects.filter(tag_id=tag_id, expense__date__gte=from_date).aggregate(Sum('expense__amount'))['expense__amount__sum'] or 0
+        return JsonResponse({'tag_id': tag_id, 'period': 'year', 'from_date': from_date, 'total_amount': float(total)})
